@@ -1,54 +1,52 @@
-# React + TypeScript + Vite
+# 🧠 TypeScript + React Learning Projects
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This repository contains a series of small, focused projects built with **React + TypeScript** to help reinforce TypeScript fundamentals while applying them in real-world UI components.
 
-Currently, two official plugins are available:
+Each project targets specific TypeScript and React concepts for progressive learning.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 🎯 Project Goals
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- ✅ Strengthen understanding of TypeScript syntax, generics, interfaces, and utility types
+- ✅ Learn how to apply types to React props, state, and event handlers
+- ✅ Practice API fetching and typing remote data
+- ✅ Build useful UI components with type safety and scalability in mind
+- ✅ Use real-world patterns like form handling, localStorage, and reusable hooks
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 📚 Concepts to Be Applied
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### 🟦 TypeScript
+- `interface` and `type` definitions
+- Generics (e.g., `useState<T>()`, custom hooks)
+- Type inference and annotations
+- Event types (`React.ChangeEvent`, `MouseEvent`, etc.)
+- Enums and Union types
+- Utility types: `Partial`, `Record`, `Pick`, etc.
+- Optional and readonly properties
+- Typing API responses
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+### ⚛️ React
+- Functional components with typed props
+- State management with `useState` and `useReducer`
+- Side effects with `useEffect`
+- Controlled components for form handling
+- Component composition and props drilling
+- Conditional rendering
+- Custom hooks with generics
+- Working with localStorage and side effects
+
+---
+
+## 🔧 Tools You Can Use
+
+- [Vite](https://vitejs.dev/) – for fast React + TS setup
+- [Tailwind CSS](https://tailwindcss.com/) – for utility-first styling (optional)
+- [Axios](https://axios-http.com/) – for typed API requests
+- React Developer Tools – for debugging component behavior
+
+---
+
+> 🚀 Start building, break things, and let TypeScript catch the bugs before runtime!
