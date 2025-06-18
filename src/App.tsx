@@ -7,33 +7,44 @@ import {
   getDocs,
   orderBy,
   query,
-  limit,
 } from "firebase/firestore";
-import firebase from "firebase/compat/app";
 
 interface Task {
   taskName: string;
   createdAt: Date;
 }
 
+//setting the type for the state
+//[] is incomplete so you will need to define the type of it like string[] . number[]
+interface TaskItem {
+  tasks: object[];
+  setTask: object[];
+}
+
 function App() {
   const taskRef = useRef<HTMLInputElement | null>(null);
-  const [tasks, setTasks] = useState<[]>();
+  //when we put the type at this <TaskItem> it refers to a single object
+  //but when we defined it as like this <TaskItem[]> it now refers to an array of object
+  const [tasks, setTasks] = useState<TaskItem[]>();
+
+  useEffect(() => {
+    getOrderedData(setTasks);
+  }, []);
 
   function handleAdd(e: any) {
     e.preventDefault();
+    //Typescript checks if a value is null here so we  used ? in the current part
+    //This line of code says that if current is not null return its value
+    // (?) is put in the optional part (current) instead of the value
     const task = taskRef.current?.value;
     addTask(task);
-    getAllTasks(setTasks);
+    getOrderedData(setTasks);
     //The left-hand side of an assignment expression may not be an optional property access occurs cause i am trying to use it in an object
     if (taskRef.current) {
       taskRef.current.value = "";
     }
   }
 
-  useEffect(() => {
-    getAllTasks(setTasks);
-  }, []);
   return (
     <>
       <div className="font-[Poppins] flex flex-col h-full justify-center items-center gap-2 mt-10">
@@ -55,7 +66,7 @@ function App() {
           </form>
           <div className="flex flex-col gap-3 mt-3">
             {tasks &&
-              tasks.map((data) => (
+              tasks.map((data: any) => (
                 <TaskCard
                   taskName={data["taskName"]}
                   createdAt={data["createdAt"]}
@@ -74,8 +85,6 @@ async function addTask(task: string | undefined) {
       taskName: task,
       createdAt: serverTimestamp(),
     });
-
-    console.log(docRef);
   } catch (error) {
     console.log(error);
   }
@@ -98,23 +107,24 @@ function TaskCard({ taskName, createdAt }: Task) {
   );
 }
 
-async function getAllTasks(setTasks: any) {
-  const querySnapShot = await getDocs(collection(db, "tasks"));
-  let data: object[] = [];
-  querySnapShot.forEach((document) => {
-    data.push(document.data());
-  });
-
-  setTasks(data);
-}
-
-
 //TODO: handle ordering of tasks by date
-async function getOrderedData() {
+function getOrderedData(setTasks: any) {
+  //creating reference from the database and the document name
   const taskRef = collection(db, "tasks");
-  const q = query(taskRef),where("taskName","=="," ")
-
-  const querySnapShot = await 
+  //query for ordering tasks based on a field
+  const order = query(taskRef, orderBy("createdAt"));
+  let data: object[] = [];
+  getDocs(order)
+    .then((query) => {
+      query.forEach((doc) => {
+        console.log(doc.data());
+        data.push(doc.data());
+        setTasks(data);
+      });
+    })
+    .catch((error) => {
+      console.log(error);
+    });
 }
 
 export default App;
