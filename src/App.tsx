@@ -11,6 +11,8 @@ import {
   query,
   setDoc,
   doc,
+  deleteDoc,
+  where,
 } from "firebase/firestore";
 
 //TODO: Add more type safety and document
@@ -23,9 +25,15 @@ interface TaskItem {
 }
 
 interface Task {
+  id: string | number;
   taskName?: string;
   isCompleted: boolean;
+  setLoading?: any;
+  setTasks?: any;
+  notifyDeletion?: any;
+  notifyComplete?: any;
 }
+var task_id: number = 0;
 
 //TODO: Update Task and Deletion
 function App() {
@@ -41,6 +49,12 @@ function App() {
   };
   const notifyError = () => {
     toast.error("Task cannot be blank");
+  };
+  const notifyComplete = () => {
+    toast.success("Task Completed");
+  };
+  const notifyDeletion = () => {
+    toast.success("Deletion Successfull");
   };
 
   useEffect(() => {
@@ -60,7 +74,9 @@ function App() {
       return;
     }
     //payload for task details and status
+    getId();
     const payLoad = {
+      id: task_id,
       taskName: task,
       isCompleted: false,
     };
@@ -100,8 +116,14 @@ function App() {
               {tasks &&
                 tasks.map((data: any) => (
                   <TaskCard
-                    taskName={data["taskName"]}
+                    key={data.id}
+                    id={data.id}
+                    taskName={data.taskName}
                     isCompleted={data.isCompleted}
+                    setLoading={setLoading}
+                    setTasks={setTasks}
+                    notifyDeletion={notifyDeletion}
+                    notifyComplete={notifyComplete}
                   />
                 ))}
             </div>
@@ -115,6 +137,7 @@ function App() {
 async function addTask(task: Task, notifySuccess: any) {
   try {
     const docRef = await addDoc(collection(db, "tasks"), {
+      id: task_id + 1,
       taskName: task.taskName,
       isCompleted: task.isCompleted,
       createdAt: serverTimestamp(),
@@ -126,9 +149,23 @@ async function addTask(task: Task, notifySuccess: any) {
   }
 }
 
-async function updateTask() {}
-
-function TaskCard({ taskName, isCompleted }: Task) {
+function TaskCard({
+  id,
+  taskName,
+  isCompleted,
+  setTasks,
+  setLoading,
+  notifyDeletion,
+  notifyComplete,
+}: Task) {
+  const handleUpdate = (task_id: string | number) => {
+    setLoading(true);
+    updateTask(task_id, setLoading, setTasks, notifyComplete);
+  };
+  const handleDelete = (task_id: string | number) => {
+    setLoading(true);
+    removeTask(task_id, setLoading, setTasks, notifyDeletion);
+  };
   return (
     <div>
       <div className="card w-96 bg-base-100 card-sm shadow-sm">
@@ -140,12 +177,20 @@ function TaskCard({ taskName, isCompleted }: Task) {
               <p className="">{taskName}</p>
             )}
           </h2>
-          <p></p>
+
           <div className="justify-end card-actions">
-            <button className="btn btn-success" title="Mark Done">
+            <button
+              className="btn btn-success"
+              title="Mark Done"
+              onClick={() => handleUpdate(id)}
+            >
               <i className="fa-solid fa-check  font-bold"></i>
             </button>
-            <button className="btn btn-error" title="Delete Task">
+            <button
+              className="btn btn-error"
+              title="Delete Task"
+              onClick={() => handleDelete(id)}
+            >
               <i className="fa-solid fa-trash font-bold"></i>
             </button>
           </div>
@@ -154,8 +199,56 @@ function TaskCard({ taskName, isCompleted }: Task) {
     </div>
   );
 }
+async function removeTask(
+  id: string | number,
+  setLoading: any,
+  setTasks: any,
+  notifyDeletion: any
+) {
+  const filter = query(collection(db, "tasks"), where("id", "==", id));
+  const get = await getDocs(filter);
+  get.forEach(async (item) => {
+    //must have 3 params
+    await deleteDoc(doc(db, "tasks", item.id));
+    setLoading(false);
+    setTasks(getOrderedData);
+    notifyDeletion();
+  });
+}
 
-function testGet() {}
+async function updateTask(
+  id: string | number,
+  setLoading: any,
+  setTasks: any,
+  notifyComplete: any
+) {
+  const filter = query(collection(db, "tasks"), where("id", "==", id));
+  const get = await getDocs(filter);
+  get.forEach(async (item) => {
+    await setDoc(doc(db, "tasks", item.id), {
+      id: item.data().id,
+      isCompleted: true,
+      taskName: item.data().taskName,
+      createdAt: item.data().createdAt,
+    });
+    setLoading(false);
+    setTasks(getOrderedData);
+    notifyComplete();
+  });
+}
+
+async function getId() {
+  const ref = collection(db, "tasks");
+  const data = query(ref);
+  let count = 0;
+
+  getDocs(data).then((task) => {
+    task.forEach((data) => {
+      count++;
+      task_id = count;
+    });
+  });
+}
 
 function getOrderedData(setTasks: any) {
   //creating reference from the database and the document name
@@ -163,12 +256,10 @@ function getOrderedData(setTasks: any) {
   //query for ordering tasks based on a field
   const order = query(taskRef, orderBy("createdAt"));
   let data: object[] = [];
-
   getDocs(order)
     .then((query) => {
       query.forEach((doc) => {
-        data.push({ data: doc.data() }, { id: doc.id });
-
+        data.push(doc.data());
         setTasks(data);
       });
     })
@@ -176,4 +267,5 @@ function getOrderedData(setTasks: any) {
       console.log(error);
     });
 }
+
 export default App;
