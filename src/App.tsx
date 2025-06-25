@@ -15,7 +15,7 @@ import {
   where,
 } from "firebase/firestore";
 
-//TODO: Add more type safety and document
+//TODO: Change the ID mechanism , and then refactor code
 
 //setting the type for the state
 //[] is incomplete so you will need to define the type of it like string[] . number[]
@@ -25,7 +25,6 @@ interface TaskItem {
 }
 
 interface Task {
-  id: string | number;
   taskName?: string;
   isCompleted: boolean;
   setLoading?: any;
@@ -46,17 +45,22 @@ function App() {
   const notifySuccess = () => {
     toast.success("Task  Added successfully");
     setLoading(false);
+    getOrderedData(setTasks);
+  };
+
+  const notifyComplete = () => {
+    toast.success("Task Completed");
+    getOrderedData(setTasks);
+  };
+  const notifyDeletion = () => {
+    toast.success("Deletion Successfull");
+    getOrderedData(setTasks);
   };
   const notifyError = () => {
     toast.error("Task cannot be blank");
   };
-  const notifyComplete = () => {
-    toast.success("Task Completed");
-  };
-  const notifyDeletion = () => {
-    toast.success("Deletion Successfull");
-  };
 
+  //runs on first render
   useEffect(() => {
     getOrderedData(setTasks);
   }, []);
@@ -117,7 +121,6 @@ function App() {
                 tasks.map((data: any) => (
                   <TaskCard
                     key={data.id}
-                    id={data.id}
                     taskName={data.taskName}
                     isCompleted={data.isCompleted}
                     setLoading={setLoading}
@@ -134,37 +137,20 @@ function App() {
   );
 }
 
-async function addTask(task: Task, notifySuccess: any) {
-  try {
-    const docRef = await addDoc(collection(db, "tasks"), {
-      id: task_id + 1,
-      taskName: task.taskName,
-      isCompleted: task.isCompleted,
-      createdAt: serverTimestamp(),
-    });
-
-    notifySuccess();
-  } catch (error) {
-    console.log(error);
-  }
-}
-
 function TaskCard({
-  id,
   taskName,
   isCompleted,
-  setTasks,
   setLoading,
   notifyDeletion,
   notifyComplete,
 }: Task) {
   const handleUpdate = (task_id: string | number) => {
     setLoading(true);
-    updateTask(task_id, setLoading, setTasks, notifyComplete);
+    updateTask(task_id, notifyComplete, setLoading);
   };
   const handleDelete = (task_id: string | number) => {
     setLoading(true);
-    removeTask(task_id, setLoading, setTasks, notifyDeletion);
+    removeTask(task_id, notifyDeletion, setLoading);
   };
   return (
     <div>
@@ -199,41 +185,54 @@ function TaskCard({
     </div>
   );
 }
+
+async function addTask(task: Task, notifySuccess: any) {
+  try {
+    await addDoc(collection(db, "tasks"), {
+      id: task_id ? task_id + 1 : 1,
+      taskName: task.taskName,
+      isCompleted: task.isCompleted,
+      createdAt: serverTimestamp(),
+    });
+
+    notifySuccess();
+  } catch (error) {
+    console.log(error);
+  }
+}
 async function removeTask(
   id: string | number,
   setLoading: any,
-  setTasks: any,
   notifyDeletion: any
 ) {
   const filter = query(collection(db, "tasks"), where("id", "==", id));
   const get = await getDocs(filter);
   get.forEach(async (item) => {
-    //must have 3 params
     await deleteDoc(doc(db, "tasks", item.id));
     setLoading(false);
-    setTasks(getOrderedData);
     notifyDeletion();
   });
 }
 
 async function updateTask(
   id: string | number,
-  setLoading: any,
-  setTasks: any,
-  notifyComplete: any
+  notifyComplete: any,
+  setLoading: any
 ) {
+  //queries and filter based on the id to get the result
+  console.log("ID :", id);
   const filter = query(collection(db, "tasks"), where("id", "==", id));
   const get = await getDocs(filter);
   get.forEach(async (item) => {
     await setDoc(doc(db, "tasks", item.id), {
       id: item.data().id,
+      //marks the task completed
       isCompleted: true,
       taskName: item.data().taskName,
       createdAt: item.data().createdAt,
     });
     setLoading(false);
-    setTasks(getOrderedData);
-    notifyComplete();
+    return notifyComplete();
   });
 }
 
@@ -243,7 +242,7 @@ async function getId() {
   let count = 0;
 
   getDocs(data).then((task) => {
-    task.forEach((data) => {
+    task.forEach(() => {
       count++;
       task_id = count;
     });
