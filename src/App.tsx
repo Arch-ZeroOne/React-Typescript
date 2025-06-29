@@ -6,16 +6,14 @@ import {
   collection,
   addDoc,
   serverTimestamp,
+  getDoc,
   getDocs,
   orderBy,
   query,
   setDoc,
   doc,
   deleteDoc,
-  where,
 } from "firebase/firestore";
-
-//TODO: Change the ID mechanism , and then refactor code
 
 //setting the type for the state
 //[] is incomplete so you will need to define the type of it like string[] . number[]
@@ -25,16 +23,24 @@ interface TaskItem {
 }
 
 interface Task {
-  taskName?: string;
+  taskName: string;
   isCompleted: boolean;
   setLoading?: any;
   setTasks?: any;
   notifyDeletion?: any;
   notifyComplete?: any;
 }
-var task_id: number = 0;
 
-//TODO: Update Task and Deletion
+interface TaskCard {
+  id: string;
+  taskName: string;
+  isCompleted: boolean;
+  setLoading: any;
+  setTasks: any;
+  notifyDeletion: any;
+  notifyComplete: any;
+}
+
 function App() {
   const taskRef = useRef<HTMLInputElement | null>(null);
   //when we put the type at this <TaskItem> it refers to a single object
@@ -78,9 +84,7 @@ function App() {
       return;
     }
     //payload for task details and status
-    getId();
     const payLoad = {
-      id: task_id,
       taskName: task,
       isCompleted: false,
     };
@@ -120,6 +124,7 @@ function App() {
               {tasks &&
                 tasks.map((data: any) => (
                   <TaskCard
+                    id={data.id}
                     key={data.id}
                     taskName={data.taskName}
                     isCompleted={data.isCompleted}
@@ -138,12 +143,13 @@ function App() {
 }
 
 function TaskCard({
+  id,
   taskName,
   isCompleted,
   setLoading,
   notifyDeletion,
   notifyComplete,
-}: Task) {
+}: TaskCard) {
   const handleUpdate = (task_id: string | number) => {
     setLoading(true);
     updateTask(task_id, notifyComplete, setLoading);
@@ -152,6 +158,7 @@ function TaskCard({
     setLoading(true);
     removeTask(task_id, notifyDeletion, setLoading);
   };
+
   return (
     <div>
       <div className="card w-96 bg-base-100 card-sm shadow-sm">
@@ -189,7 +196,6 @@ function TaskCard({
 async function addTask(task: Task, notifySuccess: any) {
   try {
     await addDoc(collection(db, "tasks"), {
-      id: task_id ? task_id + 1 : 1,
       taskName: task.taskName,
       isCompleted: task.isCompleted,
       createdAt: serverTimestamp(),
@@ -205,13 +211,14 @@ async function removeTask(
   setLoading: any,
   notifyDeletion: any
 ) {
-  const filter = query(collection(db, "tasks"), where("id", "==", id));
-  const get = await getDocs(filter);
-  get.forEach(async (item) => {
-    await deleteDoc(doc(db, "tasks", item.id));
+  const filter = doc(db, "tasks", String(id));
+  const docRef = await getDoc(filter);
+
+  if (docRef.exists()) {
+    await deleteDoc(doc(db, "tasks", docRef.id));
     setLoading(false);
     notifyDeletion();
-  });
+  }
 }
 
 async function updateTask(
@@ -220,33 +227,20 @@ async function updateTask(
   setLoading: any
 ) {
   //queries and filter based on the id to get the result
-  console.log("ID :", id);
-  const filter = query(collection(db, "tasks"), where("id", "==", id));
-  const get = await getDocs(filter);
-  get.forEach(async (item) => {
-    await setDoc(doc(db, "tasks", item.id), {
-      id: item.data().id,
+  const filter = doc(db, "tasks", String(id));
+  const docRef = await getDoc(filter);
+
+  if (docRef.exists()) {
+    await setDoc(doc(db, "tasks", docRef.id), {
+      id: docRef.id,
       //marks the task completed
       isCompleted: true,
-      taskName: item.data().taskName,
-      createdAt: item.data().createdAt,
+      taskName: docRef.data().taskName,
+      createdAt: docRef.data().createdAt,
     });
+    notifyComplete();
     setLoading(false);
-    return notifyComplete();
-  });
-}
-
-async function getId() {
-  const ref = collection(db, "tasks");
-  const data = query(ref);
-  let count = 0;
-
-  getDocs(data).then((task) => {
-    task.forEach(() => {
-      count++;
-      task_id = count;
-    });
-  });
+  }
 }
 
 function getOrderedData(setTasks: any) {
@@ -255,12 +249,27 @@ function getOrderedData(setTasks: any) {
   //query for ordering tasks based on a field
   const order = query(taskRef, orderBy("createdAt"));
   let data: object[] = [];
+  let objectData: any = {};
+
   getDocs(order)
     .then((query) => {
       query.forEach((doc) => {
-        data.push(doc.data());
+        //*Destructures the data
+        const { taskName, isCompleted, createdAt } = doc.data();
+        objectData.id = doc.id;
+        objectData.taskName = taskName;
+        objectData.isCompleted = isCompleted;
+        objectData.createdAt = createdAt;
+
+        data.push(objectData);
         setTasks(data);
+        //reset every iteration
+        objectData = {};
       });
+
+      if (!data.length) {
+        setTasks();
+      }
     })
     .catch((error) => {
       console.log(error);
